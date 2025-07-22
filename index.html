@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CYM Leader Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+    }
+    header {
+      background: #222;
+      color: #fff;
+      padding: 1em;
+      text-align: center;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 1em;
+    }
+    .month-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 1em;
+    }
+    .month-selector button {
+      padding: 0.5em 1em;
+      border: none;
+      background: #ccc;
+      cursor: pointer;
+    }
+    .month-selector button.active {
+      background: #4CAF50;
+      color: white;
+    }
+    .form-section {
+      background: #fff;
+      padding: 1em;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin-top: 1em;
+    }
+    .calendar div {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 0.5em;
+      text-align: center;
+      font-size: 14px;
+    }
+    .calendar input[type="checkbox"] {
+      margin-top: 5px;
+    }
+    .attendance-section {
+      margin-top: 2em;
+    }
+    .attendance-section label {
+      font-weight: bold;
+      display: block;
+      margin-top: 1em;
+    }
+    .attendance-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      margin-top: 0.5em;
+    }
+    .attendance-grid button {
+      padding: 0.4em;
+      background: #eee;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+    .attendance-grid button.P { background: #4CAF50; color: white; }
+    .attendance-grid button.A { background: #f44336; color: white; }
+    .attendance-grid button.NM { background: #999; color: white; }
+  </style>
+</head>
+<body>
+  <div id="auth-container" style="text-align:center; margin-top: 2em;">
+    <h2>Login</h2>
+    <input type="email" id="email" placeholder="Email" style="padding:5px; width:250px;"/><br/><br/>
+    <input type="password" id="password" placeholder="Password" style="padding:5px; width:250px;"/><br/><br/>
+    <button onclick="login()">Login</button>
+    <p id="auth-message" style="color:red;"></p>
+  </div>
+
+  <div id="app" style="display:none;">
+  <header>
+    <h1>CYM 2025 Leader Tracker</h1>
+    <div id="user-info"></div>
+  </header>
+  <div class="container">
+    <p style="background:#fffae6; padding:10px; border:1px solid #f0c36d; border-radius:5px; font-weight:bold; text-align:center;">📸 TAKE A SCREENSHOT AND SEND IT TO THE PROGRAM COMMITTEE</p>
+    <div style="text-align:center; margin-top:10px;">
+      <label for="username"><strong>Insert Name:</strong></label>
+      <input type="text" id="username" name="username" placeholder="Type your full name..." style="padding:5px; width:80%; max-width:400px; margin-top:5px;" />
+    </div>
+    <div class="month-selector" id="month-selector"></div>
+    <div class="form-section">
+      <h2 id="month-title">January</h2>
+      <h3>DEVOTION: <span id='devotion-count'>0</span> days checked</h3>
+      <div id="calendar" class="calendar"></div>
+      <div class="attendance-section" id="attendance-forms"></div>
+    </div>
+  </div>
+
+  <script>
+    const months = [
+      "January","February","March","April","May","June",
+      "July","August","September","October","November","December"
+    ];
+
+    const sections = [
+      "W12 MEETING",
+      "W12 DISCIPLESHIP",
+      "CELL GROUP",
+      "SUNDAY SERVICE",
+      "CYM NIGHT",
+      "THURSDAY TRAINING",
+      "PRAYER MEETING"
+    ];
+
+    const daysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
+    const monthSelector = document.getElementById("month-selector");
+    const monthTitle = document.getElementById("month-title");
+    const calendarDiv = document.getElementById("calendar");
+    const attendanceForms = document.getElementById("attendance-forms");
+
+    let currentMonth = 0;
+
+    function renderMonthButtons() {
+      months.forEach((month, index) => {
+        const btn = document.createElement("button");
+        btn.textContent = month;
+        btn.classList.toggle("active", index === 0);
+        btn.onclick = () => {
+          currentMonth = index;
+          document.querySelectorAll(".month-selector button").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          renderCalendar();
+          renderAttendance();
+        };
+        monthSelector.appendChild(btn);
+      });
+    }
+
+    function updateDevotionCount() {
+      const checkboxes = document.querySelectorAll('#calendar input[type="checkbox"]');
+      const count = Array.from(checkboxes).filter(cb => cb.checked).length;
+      document.getElementById('devotion-count').textContent = count;
+    }
+
+    function renderCalendar() {
+      const year = 2025;
+      const month = currentMonth;
+      const days = daysInMonth(month, year);
+      monthTitle.textContent = months[month];
+      calendarDiv.innerHTML = "";
+
+      const weekdays = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+      weekdays.forEach(day => {
+        const dayCell = document.createElement("div");
+        dayCell.style.fontWeight = "bold";
+        dayCell.textContent = day;
+        calendarDiv.appendChild(dayCell);
+      });
+
+      const firstDay = new Date(year, month, 1).getDay();
+      for (let i = 0; i < firstDay; i++) {
+        calendarDiv.appendChild(document.createElement("div"));
+      }
+
+      for (let i = 1; i <= days; i++) {
+        const cell = document.createElement("div");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = JSON.parse(localStorage.getItem(`devotion_${currentMonth}_${i}`)) || false;
+        checkbox.addEventListener('change', () => {
+          localStorage.setItem(`devotion_${currentMonth}_${i}`, checkbox.checked);
+          updateDevotionCount();
+        });
+        cell.innerHTML = `${i}<br>`;
+        cell.appendChild(checkbox);
+        calendarDiv.appendChild(cell);
+      }
+    }
+
+    function renderAttendance() {
+      attendanceForms.innerHTML = "";
+
+      const title = document.createElement("div");
+      title.innerHTML = `
+        <strong>FULL MONTH ATTENDANCE</strong><br/>
+        <strong>Legend:</strong> <span style='color:green'>Green = Present</span>, 
+        <span style='color:red'>Red = Absent</span>, 
+        <span style='color:gray'>Gray = No Meeting</span><br/><br/>
+      `;
+      attendanceForms.appendChild(title);
+
+      
+
+      sections.forEach(section => {
+        const label = document.createElement("label");
+        label.textContent = section;
+        attendanceForms.appendChild(label);
+
+        const grid = document.createElement("div");
+        grid.className = "attendance-grid";
+        for (let i = 1; i <= 5; i++) {
+          const btn = document.createElement("button");
+          const weekLabels = ["1st week", "2nd week", "3rd week", "4th week", "5th week"];
+          btn.textContent = weekLabels[i - 1];
+          const savedState = localStorage.getItem(`attendance_${currentMonth}_${section}_${i}`);
+          if (savedState) btn.className = savedState;
+          btn.onclick = () => {
+            const next = btn.classList.contains("P") ? "A" : btn.classList.contains("A") ? "NM" : "P";
+            btn.className = next;
+            localStorage.setItem(`attendance_${currentMonth}_${section}_${i}`, next);
+          };
+          grid.appendChild(btn);
+        }
+        attendanceForms.appendChild(grid);
+      });
+    }
+
+    renderMonthButtons();
+    renderCalendar();
+    renderAttendance();
+  </script>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      auth.signInWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          const user = userCredential.user;
+          const isAdmin = user.email.includes("admin"); // TEMPORARY check
+          document.getElementById("auth-container").style.display = "none";
+          document.getElementById("app").style.display = "block";
+          document.getElementById("user-info").textContent = `Logged in as ${user.email} ${isAdmin ? '(Admin)' : ''}`;
+        })
+        .catch(error => {
+          document.getElementById("auth-message").textContent = error.message;
+        });
+    }
+  </script>
+</body>
+</html>
