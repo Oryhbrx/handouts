@@ -145,21 +145,32 @@
 
     let currentMonth = 0;
 
-    function renderMonthButtons() {
-      months.forEach((month, index) => {
-        const btn = document.createElement("button");
-        btn.textContent = month;
-        btn.classList.toggle("active", index === 0);
-        btn.onclick = () => {
-          currentMonth = index;
-          document.querySelectorAll(".month-selector button").forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-          renderCalendar();
-          renderAttendance();
-        };
-        monthSelector.appendChild(btn);
-      });
+function renderMonthButtons() {
+  monthSelector.innerHTML = "";
+  const isAdmin = window.currentUserRole === 'admin';
+  const currentSystemMonth = new Date().getMonth();
+
+  months.forEach((month, index) => {
+    const btn = document.createElement("button");
+    btn.textContent = month;
+    btn.classList.toggle("active", index === currentSystemMonth);
+
+    if (!isAdmin && index !== currentSystemMonth) {
+      btn.disabled = true;
+      btn.style.opacity = 0.5;
     }
+
+    btn.onclick = () => {
+      if (!isAdmin && index !== currentSystemMonth) return;
+      currentMonth = index;
+      document.querySelectorAll(".month-selector button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderCalendar();
+      renderAttendance();
+    };
+    monthSelector.appendChild(btn);
+  });
+}
 
     function updateDevotionCount() {
       const checkboxes = document.querySelectorAll('#calendar input[type="checkbox"]');
@@ -261,21 +272,38 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
-    function login() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      auth.signInWithEmailAndPassword(email, password)
-        .then(userCredential => {
-          const user = userCredential.user;
-          const isAdmin = user.email.includes("admin"); // TEMPORARY check
-          document.getElementById("auth-container").style.display = "none";
-          document.getElementById("app").style.display = "block";
-          document.getElementById("user-info").textContent = `Logged in as ${user.email} ${isAdmin ? '(Admin)' : ''}`;
-        })
-        .catch(error => {
-          document.getElementById("auth-message").textContent = error.message;
-        });
-    }
+function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  
+  auth.signInWithEmailAndPassword(email, password)
+    .then(userCredential => {
+      const user = userCredential.user;
+
+      firebase.firestore().collection("users").doc(user.uid).get().then(docSnap => {
+        if (!docSnap.exists) {
+          auth.signOut();
+          document.getElementById("auth-message").textContent = "Your account is not yet approved by an admin.";
+          return;
+        }
+
+        const userData = docSnap.data();
+        window.currentUserRole = userData.role; // Store globally
+        const isAdmin = userData.role === "admin";
+
+        document.getElementById("auth-container").style.display = "none";
+        document.getElementById("app").style.display = "block";
+        document.getElementById("user-info").textContent = `Logged in as ${user.email} ${isAdmin ? '(Admin)' : ''}`;
+
+        renderMonthButtons(); // Re-render with role check
+        renderCalendar();
+        renderAttendance();
+      });
+    })
+    .catch(error => {
+      document.getElementById("auth-message").textContent = error.message;
+    });
+}
   function signup() {
       const email = document.getElementById("signup-email").value;
       const password = document.getElementById("signup-password").value;
