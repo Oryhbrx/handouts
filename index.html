@@ -88,10 +88,17 @@
 <body>
   <div id="auth-container" style="text-align:center; margin-top: 2em;">
     <h2>Login</h2>
+    <h2>Login</h2>
     <input type="email" id="email" placeholder="Email" style="padding:5px; width:250px;"/><br/><br/>
     <input type="password" id="password" placeholder="Password" style="padding:5px; width:250px;"/><br/><br/>
     <button onclick="login()">Login</button>
     <p id="auth-message" style="color:red;"></p>
+    <hr style="margin: 2em 0;"/>
+    <h2>Sign Up</h2>
+    <input type="email" id="signup-email" placeholder="Email" style="padding:5px; width:250px;"/><br/><br/>
+    <input type="password" id="signup-password" placeholder="Password" style="padding:5px; width:250px;"/><br/><br/>
+    <button onclick="signup()">Create Account</button>
+    <p id="signup-message" style="color:green;"></p>
   </div>
 
   <div id="app" style="display:none;">
@@ -241,6 +248,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
@@ -267,6 +275,27 @@
         .catch(error => {
           document.getElementById("auth-message").textContent = error.message;
         });
+    }
+  function signup() {
+      const email = document.getElementById("signup-email").value;
+      const password = document.getElementById("signup-password").value;
+      const name = prompt("Enter your full name:");
+      const role = email.includes("admin") ? "admin" : "user";
+
+      // Temporarily store user signup request for admin approval
+      firebase.firestore().collection("pendingUsers").add({
+        name: name,
+        email: email,
+        role: role,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(() => {
+          document.getElementById("signup-message").style.color = 'green';
+          document.getElementById("signup-message").textContent = "Signup successful! Waiting for admin approval.";
+        });
+          // Auto login removed to wait for admin approval
     }
   </script>
 </body>
